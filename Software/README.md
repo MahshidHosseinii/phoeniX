@@ -1,79 +1,207 @@
-Software
+Quick Sort & Integer Square Root
 ====================
 <div align="justify">
 
-This directory contains source files of sample codes and user codes which will be executed on the phoeniX processor. In this directory, there are three subdirectories included:
-- `Sample_Assembly_Codes`
-- `Sample_C_Codes`
-- `User_Codes`
+This directory contains source files of user codes which will be executed on the phoeniX processor. In this directory, there are two subdirectories included:
+- `quicksort`
+- `rootsquare`
 
-The code execution and simulation on the phoeniX RISC-V processor follow two distinct branches: one for Linux systems and another for Windows systems.
 </div>
 
-### Linux
+## QuickSort Implementation in RISC-V Assembly
 
-#### Running Sample Codes
+This code implements the QuickSort algorithm in RISC-V assembly language. The algorithm works by partitioning an array into two sub-arrays around a pivot element, then recursively sorting the sub-arrays.
 <div align="justify">
 
-The directory `/Software` contains sample codes for some conventional programs and algorithms in both Assembly and C which can be found in `/Sample_Assembly_Codes` and `/Sample_C_Codes` sub-directories respectively. 
+### Function Overview
 
-phoeniX convention for naming projects is as follows; The main source file of the project is named as `{project.c}` or `{project.s}`. This file along other required source files are kept in one directory which has the same name as the project itself, i.e. `/project`.
+The code consists of two main functions: `QuickSort` and `PrintArr`.
 
-Sample projects provided at this time are `bubble_sort`, `fibonacci`, `find_max_array`, `sum1ton`.
-To run any of these sample projects simply run `make sample` followed by the name of the project passed as a variable named project to the Makefile.
-```shell
-make sample project={project}
-```
-For example:
-```shell
-make sample project=fibonacci
-```
-
-Provided that the RISC-V toolchain is set up correctly, the Makefile will compile the source codes separately, then using the linker script `riscv.ld` provided in `/Firmware` it links all the object files necessary together and creates `firmware.elf`. It then creates `start.elf` which is built from `start.s` and `start.ld` and concatenate these together and finally forms the `{project}_firmware.hex`. This final file can be directly fed to our verilog testbench. Makefile automatically runs the testbench and calls upon `gtkwave` to display the selected signals in the waveform viewer.
-
-</div>
-
-#### Running Your Own Code
 <div align="justify">
 
-In order to run your own code on phoeniX, create a directory named to your project such as `/my_project` in `/Software/User_Codes/`. Put all your `.c` and `.s` files in `/my_project` and run the following `make` command from the main directory:
-```shell
-make code project=my_project
+The first one for print array before and after sort and another for execution of quick sort on a array.
+
+First Choose a number in array as a pivot, and we need to make all the numbers on the left of the pivot are smaller than the pivot, all the numbers on the right of the pivot are bigger than the pivot.
+
+this is the line that we realize that we can't go further.
+
 ```
-Provided that you name your project sub-directory correctly and the RISC-V Toolchain is configured without any troubles on your machine, the Makefile will compile all your source files separately, then using the linker script `riscv.ld` provided in `/Firmware` it links all the object files necessary together and creates `firmware.elf`. It then creates `start.elf` which is built from `start.s` and `start.ld` and concatenate these together and finally forms the `my_project_firmware.hex`. After that, `iverilog` and `gtkwave` are used to compile the design and view the selected waveforms.
-> Further Configurations
-: The default testbench provided as `phoeniX_Testbench.v` is currently set to support up to 4MBytes of memory and the stack pointer register `sp` is configured accordingly. If you wish to change this, you need configure both the testbench and the initial value the `sp` is set to in `/Firmware/start.s`. If you wish to use other specific libraries and header files not provided in `/Firmware` please beware you may need to change linker scripts `riscv.ld` and `start.ld`.
-</div>
+beq  s4, s5, EndSortLoop
+```
 
-### Windows
+Next, look upon all numbers on the left of the pivot as new array, and do the same in numbers on the right side.
+Repeat the step 1 and 2, until you can't divide more small array.
 
-#### Running Sample Codes
+In the  two below part `Recursion1` and `Recursion1` we repeat quick sort algorithm recursively for sub array that generated in left and right of the pivot:
+
+```
+Recursion1:
+    mv   a0, s0
+    mv   a1, s1
+    addi a2, s4, -1
+    jal  ra, QuickSort
+```
+
+```
+Recursion2:
+    mv   a0, s0
+    addi a1, s4, 1
+    mv   a2, s2
+    jal  ra, QuickSort
+```
+
+### More Information
+
+#### `QuickSort`
+
+The `QuickSort` function takes three arguments:
+
+- `a0`: The base address of the array to be sorted.
+- `a1`: The starting index of the sub-array to be sorted.
+- `a2`: The ending index of the sub-array to be sorted.
+
+The function performs the following steps:
+
+1. Save the necessary register values on the stack for later restoration.
+2. Recursively call `QuickSort` on the left sub-array by setting `a0` to the base address of the array, `a1` to the starting index, and `a2` to the pivot index minus one.
+3. Recursively call `QuickSort` on the right sub-array by setting `a0` to the base address of the array, `a1` to the pivot index plus one, and `a2` to the ending index.
+4. Restore the saved register values from the stack.
+5. Return to the calling function using the `jr ra` instruction.
 <div align="justify">
 
-We have meticulously developed a lightweight and user-friendly software solution with the help of Python. Our execution assistant software, `AssembleX`, has been crafted to cater to the specific needs of Windows systems, enabling seamless execution of assembly code on the phoeniX processor. 
+#### `PrintArr`
 
-This tool  enhances the efficiency of the code execution process, offering a streamlined experience for users seeking to enter the realm of assembly programming on pheoniX processor in a very simple and user-friendly way.
+The `PrintArr` function takes two arguments:
 
-Before running the script, note that the assembly output of the Venus Simulator for the code must be also saved in the project directory.
-To run any of these sample projects simply run python `AssembleX_V1.0.py sample` followed by the name of the project passed as a variable named project to the Python script.
-The input command format for the terminal follows the structure illustrated below:
-```shell
-python AssembleX_V1.0.py sample {project_name}
-```
-For example:
-```shell
-python AssembleX_V1.0.py sample fibonacci
-```
-After execution of this script, firmware file will be generated and this final file can be directly fed to our Verilog testbench. AssembleX automatically runs the testbench and calls upon gtkwave to display the selected signals in the waveform viewer application, gtkwave.
+- `a1`: The base address of the array to be printed.
+- `a2`: The size of the array.
+
+The function prints the elements of the array separated by spaces and a newline character at the end. It uses the `ecall` instruction to print individual integers and strings.
+
+#### Usage
+
+To use this implementation, you need to provide the following:
+
+- The base address of the array to be sorted, stored in register `a0`.
+- The starting index of the sub-array to be sorted, stored in register `a1`.
+- The ending index of the sub-array to be sorted, stored in register `a2`.
+
+After calling the `QuickSort` function, you can optionally call the `PrintArr` function to print the sorted array.
+
+Note that this implementation assumes the existence of a space-separated string called `space` and a newline string called `nextline` in memory, which are used for printing the array elements.
+
+#### Example
+
+To sort an array of integers `[5, 2, 9, 1, 7]` and print the sorted array, you can follow these steps:
+
+1. Load the base address of the array into register `a0`.
+2. Set register `a1` to 0 (the starting index).
+3. Set register `a2` to 4 (the ending index, assuming 0-based indexing).
+4. Call the `QuickSort` function.
+5. Load the base address of the array into register `a1`.
+6. Load the size of the array (5 in this case) into register `a2`.
+7. Call the `PrintArr` function.
+
+After executing these steps, the sorted array `[1, 2, 5, 7, 9]` will be printed to the console.
+
 </div>
 
-#### Running Your Own Code
+#### Execution
+
+![alt text](https://github.com/setarekhosravi/phoeniX_CompOrgPr/blob/main/Software/images/pr_execution.png)
+![alt text](https://github.com/setarekhosravi/phoeniX_CompOrgPr/blob/main/Software/images/quicksort.png)
+
+## Integer Square Root
+
+This code is a RISC-V assembly implementation for the Square Root Calculation problem. The goal is to calculate the square root of a given integer `x`.
+
+### Problem Description
+
+Given a non-negative integer `x`, compute and return the square root of `x` rounded down to the nearest integer.
+
+### Implementation
+
+The code consists of two main functions: `floor_sqrt` and `bit_scan_reverse`.
+
+### explanation of codes
 <div align="justify">
+Basically this problem asks us to find  𝑦 of  𝑦=√⌊𝑥⌋  with given variable 𝑥.
+where 𝑥 is a non-negative integer that ranges between [0,2^31−1].
 
-In order to run your own code on phoeniX, create a directory named to your project such as `/my_project in /Software/User_Codes/`. Put all your ``user_code.s` files in my_project and run the following command from the main directory:
-```shell
-python AssembleX_V1.0.py code my_project
+The solution exploits the fact that we are looking for an integer, and the relationship between 𝑥 and √𝑦
+ follows a strict order. So we can just enumerate each bit to find the integer that is closest to 𝑥.
+
+First Attempts to retrieve the MSB of that given number 𝑥.
+Multiply the number by 0x07C4ACDD. Shift it by 27 bits.
+Lookup the table. Now you got the index of the MSB of 𝑥 (0-based index).
+
+ Here is where we call ```floor_sqrt``` function for example number 1024 :
+
 ```
-Provided that you name your project sub-directory correctly the AssembleX software will create `my_project_firmware.hex` and fed it directly to the testbench of phoeniX processor. After that, iverilog and GTKWave are used to compile the design and view the selected waveforms.
-</div>
+  li  a0, 1024
+  jal ra, floor_sqrt
+```
 
+and here we print the result:
+
+```
+  mv a1, a0             # integer to print
+  li a0, 1              # print int environment call (1)
+  ecall
+```
+
+### More Information
+
+#### `floor_sqrt`
+
+The `floor_sqrt` function takes an integer `x` (stored in `a0`) and returns the floor of its square root (stored in `a0`). It uses an iterative approach to find the square root by repeatedly adding the largest possible value to a running sum `s` (stored in `t0`) such that `s^2 <= x`. The algorithm works as follows:
+
+1. Initialize `s` to 0 and `i` to 1.
+2. Compute the approximate position of the most significant bit of `x` using `bit_scan_reverse`.
+3. Right-shift `i` by half the position of the most significant bit of `x`.
+4. In a loop:
+   - Check if adding `i` to `s` would make `(s + i)^2 > x`. If so, right-shift `i` by 1.
+   - Otherwise, add `i` to `s`.
+   - If `s^2 == x`, break out of the loop.
+5. Return `s` as the floor of the square root of `x`.
+
+#### `bit_scan_reverse`
+
+The `bit_scan_reverse` function takes an integer `x` (stored in `a0`) and returns the position of the most significant set bit in `x` (stored in `a0`). It uses a series of bitwise operations to achieve this:
+
+1. Initialize a variable `a0` with the input `x`.
+2. Perform a series of bitwise OR operations to propagate the set bits to the right.
+3. Multiply `a0` by a magic constant `0x07C4ACDD`.
+4. Right-shift `a0` by 27 bits.
+5. Use the result as an index into a precomputed lookup table to get the position of the most significant set bit.
+
+#### Usage
+
+To use this implementation, follow these steps:
+
+1. Load the integer `x` for which you want to calculate the square root into register `a0`.
+2. Call the `floor_sqrt` function by executing `jal ra, floor_sqrt`.
+3. The result will be stored in register `a0`.
+
+Note that this implementation assumes the existence of a precomputed lookup table (`table`) and a magic constant (`magic`) in memory.
+
+### Example
+
+In the provided code, the `main` function demonstrates how to use the `floor_sqrt` function:
+
+1. Load the value `64` into register `a0`.
+2. Call the `floor_sqrt` function by executing `jal ra, floor_sqrt`.
+3. Print the result (stored in `a0`) using the `ecall` system call.
+
+After executing this code, the output will be `8`, which is the floor of the square root of `64`.
+
+
+### Execution
+![alt text](https://github.com/setarekhosravi/phoeniX_CompOrgPr/blob/main/Software/images/1024.png)
+![alt text](https://github.com/setarekhosravi/phoeniX_CompOrgPr/blob/main/Software/images/squareroot.png)
+
+**In images directory** there is another output for the ```squareroot``` code.
+
+## Contributers
+* [Setare Khosravi](https://github.com/setarekhosravi)
+* [Mahshid Hosseini](https://github.com/MahshidHosseinii)
