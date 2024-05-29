@@ -2,73 +2,70 @@
 # Calculate floor(sqrt(x))
 
 .data
-magic:    .word 0x07C4ACDD
-table:    .word 0, 9, 1, 10, 13, 21, 2, 29, 11, 14, 16, 18, 22, 25, 3, 30, 8, 12, 20, 28, 15, 17, 24, 7, 19, 27, 23, 6, 26, 5, 4 ,31
+magic_const: .word 0x07C4ACDD
+lookup_tbl:  .word 0, 9, 1, 10, 13, 21, 2, 29, 11, 14, 16, 18, 22, 25, 3, 30, 8, 12, 20, 28, 15, 17, 24, 7, 19, 27, 23, 6, 26, 5, 4, 31
 
 .text
 main:
-        # call floor(squrt(x))
-        li  a0, 1024             
-        jal ra, floor_sqrt    # call floor_sqrt(x)
+        # Start calculating square root
+        li  a0, 64             # Load the input number
+        jal ra, compute_sqrt   # Call compute_sqrt
         
-        # print result
-        mv a1, a0             # integer to print
-        li a0, 1              # print int environment call (1)
-        ecall                 # print int environment call
+        # Print the result
+        mv a1, a0              # Move result to a1 for printing
+        li a0, 1               # Print integer syscall
+        ecall                  # Make syscall
         
-        # exit
-        li a0, 10             # exit environment call id (10)
-        ecall                 # exit environment call
+        # Exit the program
+        li a0, 10              # Exit syscall
+        ecall                  # Make syscall
+        ebreak
         
-        
-        
-floor_sqrt:
-        li   t0, 0            # unsigned int s = 0;
-        li   t1, 1            # unsigned int i = 1;
-        mv   s0, a0           # s0 = a0, save before call routine
-        mv   s1, ra
-        jal  ra, bit_scan_reverse
-        srli a0, a0, 1        # a0 = a0 / 2
-        sll  t1, t1, a0       # i = i << (a0/2)
-        mv   ra, s1
-        mv   a0, s0
-for_next_bit:
-        beqz t1, next_bit_end # if i == 0 goto next_bit_end
-        add  t2, t0, t1       # t2 = s + i
-        mul  t3, t2, t2       # t3 = (t2)^2 = (s+i)^2
-        bltu a0, t3, if_x_is_less_than_t3 # if a0 < t3 then don't add
-        add  t0, t0, t1       # s = s + i
-        beq  a0, t3, next_bit_end  # if s^2 == x, then t0 is the answer and we exit this loop earlier
-if_x_is_less_than_t3:
-        srli t1, t1, 1        # i = i >> 1
-        j for_next_bit        # goto for_next_bit
-next_bit_end:  
-        mv a0, t0
+compute_sqrt:
+        li   t0, 0             # result = 0;
+        li   t1, 1             # bit = 1;
+        mv   s0, a0            # Save input number
+        mv   s1, ra            # Save return address
+        jal  ra, find_bsr      # Call find_bsr to get highest bit
+        srli a0, a0, 1         # Divide by 2
+        sll  t1, t1, a0        # Shift bit left by divided value
+        mv   ra, s1            # Restore return address
+        mv   a0, s0            # Restore input number
+sqrt_loop:
+        beqz t1, sqrt_done     # If bit == 0, exit loop
+        add  t2, t0, t1        # temp = result + bit
+        mul  t3, t2, t2        # temp_squared = temp * temp
+        bltu a0, t3, skip_add  # If input < temp_squared, skip addition
+        add  t0, t0, t1        # result = result + bit
+        beq  a0, t3, sqrt_done # If result^2 == input, exit loop
+skip_add:
+        srli t1, t1, 1         # bit = bit >> 1
+        j sqrt_loop            # Repeat loop
+sqrt_done:  
+        mv a0, t0              # Move result to a0
         ret
         
-        
-        
-bit_scan_reverse:
-    srli a1, a0, 1   #
-    or   a0, a0, a1  # a0 = a0 | (a0 >> 1)
-    srli a1, a0, 2   #
-    or   a0, a0, a1  # a0 = a0 | (a0 >> 2)
-    srli a1, a0, 4   #
-    or   a0, a0, a1  # a0 = a0 | (a0 >> 4)
-    srli a1, a0, 8   #
-    or   a0, a0, a1  # a0 = a0 | (a0 >> 8)
-    srli a1, a0, 16  #
-    or   a0, a0, a1  # a0 = a0 | (a0 >> 16)
+find_bsr:
+    srli a1, a0, 1            # Shift right by 1
+    or   a0, a0, a1           # OR with shifted value
+    srli a1, a0, 2            # Shift right by 2
+    or   a0, a0, a1           # OR with shifted value
+    srli a1, a0, 4            # Shift right by 4
+    or   a0, a0, a1           # OR with shifted value
+    srli a1, a0, 8            # Shift right by 8
+    or   a0, a0, a1           # OR with shifted value
+    srli a1, a0, 16           # Shift right by 16
+    or   a0, a0, a1           # OR with shifted value
     
-    # multiply by magic
-    lw   a1, magic   # a1 = &magic
-    mul  a0, a0, a1  # a0 = a0 * magic
-    srli a0, a0, 27  # a0 = (a0 * magic) >> 27
+    # Multiply by magic constant
+    lw   a1, magic_const      # Load magic constant
+    mul  a0, a0, a1           # Multiply by magic constant
+    srli a0, a0, 27           # Shift right by 27
     
-    # table lookup
-    la   a1, table   # a1 = &table
-    slli a0, a0, 2   # a0 = a0 * 4
-    add  a0, a0, a1  # a0 = &table[a0*4]
-    lw   a0, 0(a0)   # a0 = *table[a0*4]
+    # Lookup in table
+    la   a1, lookup_tbl       # Load lookup table address
+    slli a0, a0, 2            # Multiply index by 4 (word size)
+    add  a0, a0, a1           # Calculate table entry address
+    lw   a0, 0(a0)            # Load value from table
 
-    ret
+    ret                       # Return

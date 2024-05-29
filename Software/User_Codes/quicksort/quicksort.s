@@ -1,172 +1,163 @@
 .data
-numsize:  .word 13
-number:   .word 5, 6, 8, 4, 2, -1, 20, 1531, 5132132, -5, 2147483647, 325, -521
-bfstr:    .string "Before sorting "
-afstr:    .string "After sorting "
-space:    .string " "
-nextline: .string "\n"
+array_size: .word 10
+array_data: .word 32432, 5, 7, 120, -5, -231, 65, -80, 23, 32
+before_msg: .string "Array before sorting: "
+after_msg:  .string "Array after sorting: "
+space:      .string " "
+newline:    .string "\n"
 
 .text
 main:
-    # print bfstr
-    la   a1, bfstr       # Load address of bfstr
-    addi a0, x0, 4       # a0 = 4 print_str
+    # Print before_msg
+    la   a1, before_msg   # Load address of before_msg
+    addi a0, x0, 4        # Syscall for printing string
     ecall
     
-    # print arr
-    la   a1, number
-    la   a2, numsize
-    jal  ra, PrintArr
+    # Print array
+    la   a1, array_data   # Load array address
+    la   a2, array_size   # Load array size address
+    jal  ra, PrintArray   # Call PrintArray function
     
-    # quick sort
-    la   a0, number   # a0 = &number[0]
-    addi a1, x0, 0    # a1 = lb = 0
-    la   a2, numsize  # a2 = &rb
-    lw   a2, 0(a2)    # a2 = rb
-    addi a2, a2, -1   # a2 = rb = numsize - 1
-    jal  ra, QuickSort
+    # Quick sort
+    la   a0, array_data   # Load array address
+    addi a1, x0, 0        # Set left bound to 0
+    la   a2, array_size   # Load array size address
+    lw   a2, 0(a2)        # Load array size
+    addi a2, a2, -1       # Set right bound to array size - 1
+    jal  ra, QuickSort    # Call QuickSort function
     
-    # print afstr
-    la   a1, afstr    # Load address of bfstr
-    addi a0, x0, 4    # a7 = 4 print_str
+    # Print after_msg
+    la   a1, after_msg    # Load address of after_msg
+    addi a0, x0, 4        # Syscall for printing string
     ecall
     
-    # print arr
-    la   a1, number
-    la   a2, numsize
-    jal  ra, PrintArr
-    li  a0, 10        #call system to end the program 
+    # Print array
+    la   a1, array_data   # Load array address
+    la   a2, array_size   # Load array size address
+    jal  ra, PrintArray   # Call PrintArray function
+    
+    li  a0, 10            # Syscall for exiting program
     ecall
+    ebreak
     
 QuickSort:
-    # sp     : ra
-    # sp + 4 : s0 = &arr 
-    # sp + 8 : s1 = lb
-    # sp + 12: s2 = rb
-    # sp + 16: s3 = pivot
-    # sp + 20: s4 = l
-    # sp + 24: s5 = r
-    # Store saved register
-    addi sp, sp, -28
-    sw   ra, 0(sp)     # store ra
-    sw   s0, 4(sp)     # store s0 = &arr
-    sw   s1, 8(sp)     # store s1 = lb
-    sw   s2, 12(sp)    # store s2 = rb
-    sw   s3, 16(sp)    # store s3 = pivot
-    sw   s4, 20(sp)    # store s4 = l
-    sw   s5, 24(sp)    # store s5 = r
+    # Save registers on stack
+    addi sp, sp, -28      # Allocate stack space for saving registers
+    sw   ra, 0(sp)        # Save return address
+    sw   s0, 4(sp)        # Save s0
+    sw   s1, 8(sp)        # Save s1
+    sw   s2, 12(sp)       # Save s2
+    sw   s3, 16(sp)       # Save s3
+    sw   s4, 20(sp)       # Save s4
+    sw   s5, 24(sp)       # Save s5
     
-    mv   s0, a0        # s0 = &number[0]
-    mv   s1, a1        # s1 = lb
-    mv   s2, a2        # s2 = rb
-    mv   s4, a1        # l = lb
-    mv   s5, a2        # r = rb
-    bge  s1, s2, EndQuickSort # if lb >= rb, return number 
-    mv   t0, s0        # t0 = &arr[0]
-    mv   t1, s1        # t1 = lb
-    slli t1, t1, 2     # t1 = t1 << 2
-    add  t0, t0, t1    # addr of number[lb] = addr of number[0] + lb << 2
-    lw   s3, 0(t0)     # s3 = pivot = number[lb]        
+    # Initialize local variables
+    mv   s0, a0           # s0 = array base address
+    mv   s1, a1           # s1 = left bound
+    mv   s2, a2           # s2 = right bound
+    mv   s4, a1           # s4 = l = left bound
+    mv   s5, a2           # s5 = r = right bound
+    bge  s1, s2, EndQuickSort # If left bound >= right bound, end quicksort
     
-WhileLoop:              # while (l != r)
-    beq  s4, s5, EndSortLoop  # if l == r ,goto EndSortLoop
-    mv   t0, s0         # t0 = &number[0]
-    mv   t1, s5         # t1 = r
-    mv   t2, s4         # t2 = l
-    slli t1, t1, 2      # t1 = t1 << 2
-    slli t2, t2, 2      # t2 = t2 << 2
-    add  t1, t0, t1     # addr of number[r] = addr of number[0] + r << 2
-    lw   t1, 0(t1)      # t1 = *(number + r)
-    add  t2, t0, t2     # addr of number[l] = addr of number[0] + l << 2
-    lw   t2, 0(t2)      # t2 = *(number + l)
-
-rLoop:    
-    bge  s3, t1, lLoop  # if pivot >= *(number + r), break rLoop
-    bge  s4, s5, lLoop  # if l >= r, break rLoop
-    addi s5, s5, -1     # r--
-    mv   t1, s5
-    slli t1, t1, 2
-    add  t1, t0, t1
-    lw   t1, 0(t1)
-    j rLoop
-
-lLoop:
-    blt  s3, t2, SwapLR # if pivot < *(number + l), break lLoop
-    bge  s4, s5, SwapLR # if l >= r, break lLoop
-    addi s4, s4, 1      # l++
-    mv   t2, s4
-    slli t2, t2, 2
-    add  t2, t0, t2
-    lw   t2, 0(t2)
-    j lLoop
-
-SwapLR:
-    # swap
-    bge  s4, s5, WhileLoop # if l >= r, goto CompareLR
-    mv   t0, s0         # t0 = &number[0]
-    mv   t1, s5         # t1 = r
-    mv   t2, s4         # t2 = l
-    slli t1, t1, 2      # t1 = t1 << 2
-    slli t2, t2, 2      # t2 = t2 << 2
-    add  t1, t0, t1     # t1 = addr of number[r] = addr of number[0] + r << 2
-    lw   t3, 0(t1)      # t3 = *(number + r)
-    add  t2, t0, t2     # t2 = addr of number[l] = addr of number[0] + l << 2
-    lw   t0, 0(t2)      # t0 = *(number + l)
-    sw   t3, 0(t2)      # *(number + r) store to addr of *(number + l)
-    sw   t0, 0(t1)      # *(number + l) store to addr of *(number + r)
-    j WhileLoop
-
-EndSortLoop:
-    mv   t0, s0         # t0 = &number[0]
-    mv   t1, s1         # t1 = lb
-    mv   t2, s4         # t2 = l
-    slli t1, t1, 2      # t1 = t1 << 2
-    slli t2, t2, 2      # t2 = t2 << 2
-    add  t1, t0, t1     # t1 = addr of number[lb] = addr of number[0] + lb << 2
-    add  t2, t0, t2     # addr of number[l] = addr of number[0] + l << 2
-    lw   t3, 0(t2)      # t3 = *(number + l) 
-    sw   t3, 0(t1)      # *(number + l) store to (number + lb)
-    sw   s3, 0(t2)      # s3 = pivot store to (number + l)
-
-Recursion1:
-    mv   a0, s0
-    mv   a1, s1
-    addi a2, s4, -1
-    jal  ra, QuickSort
+    # Calculate pivot
+    mv   t0, s0           # t0 = array base address
+    mv   t1, s1           # t1 = left bound
+    slli t1, t1, 2        # t1 = left bound * 4 (each element is 4 bytes)
+    add  t0, t0, t1       # t0 = address of array[left bound]
+    lw   s3, 0(t0)        # s3 = pivot = array[left bound]
     
-Recursion2:
-    mv   a0, s0
-    addi a1, s4, 1
-    mv   a2, s2
-    jal  ra, QuickSort
+PartitionLoop: 
+    beq  s4, s5, DonePartition  # If l == r, partition is done
+    
+    mv   t0, s0           # t0 = array base address
+    mv   t1, s5           # t1 = r
+    mv   t2, s4           # t2 = l
+    slli t1, t1, 2        # t1 = r * 4
+    slli t2, t2, 2        # t2 = l * 4
+    add  t1, t0, t1       # t1 = address of array[r]
+    lw   t1, 0(t1)        # t1 = array[r]
+    add  t2, t0, t2       # t2 = address of array[l]
+    lw   t2, 0(t2)        # t2 = array[l]
+    
+    # Move right index
+    bge  s3, t1, MoveLeft # If pivot >= array[r], move left index
+    bge  s4, s5, MoveLeft # If l >= r, move left index
+    addi s5, s5, -1       # r--
+    j PartitionLoop       # Jump to PartitionLoop
+    
+MoveLeft:
+    blt  s3, t2, Swap     # If pivot < array[l], swap elements
+    bge  s4, s5, Swap     # If l >= r, swap elements
+    addi s4, s4, 1        # l++
+    j PartitionLoop       # Jump to PartitionLoop
+    
+Swap:
+    bge  s4, s5, PartitionLoop # If l >= r, jump to PartitionLoop
+    mv   t0, s0           # t0 = array base address
+    mv   t1, s5           # t1 = r
+    mv   t2, s4           # t2 = l
+    slli t1, t1, 2        # t1 = r * 4
+    slli t2, t2, 2        # t2 = l * 4
+    add  t1, t0, t1       # t1 = address of array[r]
+    lw   t3, 0(t1)        # t3 = array[r]
+    add  t2, t0, t2       # t2 = address of array[l]
+    lw   t0, 0(t2)        # t0 = array[l]
+    sw   t3, 0(t2)        # array[l] = array[r]
+    sw   t0, 0(t1)        # array[r] = array[l]
+    j PartitionLoop       # Jump to PartitionLoop
+    
+DonePartition:
+    mv   t0, s0           # t0 = array base address
+    mv   t1, s1           # t1 = left bound
+    mv   t2, s4           # t2 = l
+    slli t1, t1, 2        # t1 = left bound * 4
+    slli t2, t2, 2        # t2 = l * 4
+    add  t1, t0, t1       # t1 = address of array[left bound]
+    add  t2, t0, t2       # t2 = address of array[l]
+    lw   t3, 0(t2)        # t3 = array[l]
+    sw   t3, 0(t1)        # array[left bound] = array[l]
+    sw   s3, 0(t2)        # array[l] = pivot
+    
+    # Recursive calls for left and right partitions
+    mv   a0, s0           # a0 = array base address
+    mv   a1, s1           # a1 = left bound
+    addi a2, s4, -1       # a2 = l - 1
+    jal  ra, QuickSort    # Recursive call for left partition
+    
+    mv   a0, s0           # a0 = array base address
+    addi a1, s4, 1        # a1 = l + 1
+    mv   a2, s2           # a2 = right bound
+    jal  ra, QuickSort    # Recursive call for right partition
     
 EndQuickSort:
-    lw   ra, 0(sp)
-    lw   s0, 4(sp)
-    lw   s1, 8(sp)
-    lw   s2, 12(sp)
-    lw   s3, 16(sp)
-    lw   s4, 20(sp)
-    lw   s5, 24(sp)
-    addi sp, sp, 28
-    jr   ra
+    # Restore registers from stack
+    lw   ra, 0(sp)        # Restore return address
+    lw   s0, 4(sp)        # Restore s0
+    lw   s1, 8(sp)        # Restore s1
+    lw   s2, 12(sp)       # Restore s2
+    lw   s3, 16(sp)       # Restore s3
+    lw   s4, 20(sp)       # Restore s4
+    lw   s5, 24(sp)       # Restore s5
+    addi sp, sp, 28       # Deallocate stack space
+    jr   ra               # Return from function
     
-############# print array ###############
-PrintArr:
-    mv t0, a1             # t0 = a1
-    lw t1, 0(a2)          # t1 = *a2
+PrintArray:
+    mv t0, a1             # Load array base address
+    lw t1, 0(a2)          # Load array size
 PrintLoop:
-    lw a1, 0(t0)
-    addi a0, x0, 1        # a0 = 1 print_int
+    lw a1, 0(t0)          # Load array element
+    addi a0, x0, 1        # Syscall to print integer
     ecall
-    la a1, space
-    addi a0, x0, 4        # a0 = 4 print_str
+    la a1, space          # Load address of space string
+    addi a0, x0, 4        # Syscall to print string
     ecall
-    addi t0, t0, 4        # t0 += 4
-    addi t1, t1, -1       # t1 -= 1
-    bne t1, x0, PrintLoop # if t1 != 0 ,go to printLoop
-#EndPrintArr
-    la a1, nextline
-    addi a0, x0, 4        # a0 = 4 print_str
+    addi t0, t0, 4        # Move to next element
+    addi t1, t1, -1       # Decrement array size
+    bne t1, x0, PrintLoop # Loop until all elements are printed
+
+
+    
+    la a1, newline        # Load address of newline string
+    addi a0, x0, 4        # Syscall to print string
     ecall
-    jr ra    
+    jr ra                 # Return from function
